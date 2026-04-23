@@ -6,11 +6,18 @@ const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string ?? '';
 
 export const supabase = createClient(supabaseUrl || 'https://placeholder.supabase.co', supabaseAnonKey || 'placeholder');
 
-// Recupera il miglior punteggio per utente (top 50 globali)
+// Recupera il miglior punteggio per utente (top 50 globali, solo test completi)
 export async function fetchGlobalLeaderboard(): Promise<GameScore[]> {
   const { data, error } = await supabase
     .from('game_scores')
     .select('*')
+    .not('reaction', 'is', null)
+    .not('aim', 'is', null)
+    .not('memory', 'is', null)
+    .not('typing', 'is', null)
+    .not('math', 'is', null)
+    .not('pattern', 'is', null)
+    .not('color', 'is', null)
     .order('total_score', { ascending: false })
     .limit(500);
   if (error) throw error;

@@ -77,7 +77,7 @@ export const Results: React.FC<ResultsProps> = ({ results, onRetry, singleGame }
   };
 
   useEffect(() => {
-    if (user && profile && !scoreSaved && !savedRef.current) {
+    if (!singleGame && user && profile && !scoreSaved && !savedRef.current) {
       saveScore();
     }
   }, [user, profile]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -188,15 +188,15 @@ export const Results: React.FC<ResultsProps> = ({ results, onRetry, singleGame }
         transition={{ delay: 0.8 }}
         className="flex flex-wrap gap-4 items-center justify-center"
       >
-        {!scoreSaved && (
+        {!singleGame && !scoreSaved && (
           <button onClick={handleSaveScore} className="btn-primary">
             Salva Score
           </button>
         )}
-        {scoreSaved && (
+        {!singleGame && scoreSaved && (
           <div className="percentile-tag">Score salvato ✓</div>
         )}
-        {saveError && (
+        {!singleGame && saveError && (
           <div className="text-rose-400 text-xs font-mono">{saveError}</div>
         )}
         <button onClick={onRetry} className="btn-secondary">{singleGame ? 'Torna alla Home' : 'Gioca di Nuovo'}</button>
