@@ -22,6 +22,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
   const [username, setUsername] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [verifyEmailSent, setVerifyEmailSent] = useState(false);
 
   // Dopo l'auth, se l'utente non ha profilo → mostra step username
   const step = user && !profile ? 'username' : 'auth';
@@ -44,7 +45,11 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
       err = await signUpWithEmail(email, password);
     }
     setLoading(false);
-    if (err) setError(err);
+    if (err) {
+      setError(err);
+    } else if (emailMode === 'signup') {
+      setVerifyEmailSent(true);
+    }
   };
 
   const handleUsernameSubmit = async (e: React.FormEvent) => {
@@ -70,7 +75,11 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
       onSuccess?.();
       onClose();
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Errore nel salvare lo username.');
+      const msg =
+        err instanceof Error
+          ? err.message
+          : (err as { message?: string })?.message ?? 'Errore sconosciuto.';
+      setError(msg);
     }
     setLoading(false);
   };
@@ -133,7 +142,22 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
                   </button>
                 )}
 
-                {tab === 'email' && (
+                {tab === 'email' && verifyEmailSent && (
+                  <div className="text-center py-6 space-y-3">
+                    <div className="text-3xl">📧</div>
+                    <p className="font-bold text-white">Verifica la tua email</p>
+                    <p className="text-[#88888E] text-sm">Abbiamo inviato un link di conferma a <span className="text-white">{email}</span>. Clicca il link per attivare l'account, poi accedi.</p>
+                    <button
+                      type="button"
+                      onClick={() => { setVerifyEmailSent(false); setEmailMode('signin'); }}
+                      className="mt-4 text-[#00F5FF] text-xs font-mono uppercase tracking-widest hover:underline"
+                    >
+                      Torna al login →
+                    </button>
+                  </div>
+                )}
+
+                {tab === 'email' && !verifyEmailSent && (
                   <form onSubmit={handleEmailSubmit} className="space-y-4">
                     <div className="flex gap-2 mb-4">
                       {(['signin', 'signup'] as EmailMode[]).map(m => (

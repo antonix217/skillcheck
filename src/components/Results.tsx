@@ -14,6 +14,7 @@ import { Leaderboard } from './Leaderboard';
 interface ResultsProps {
   results: GameResult[];
   onRetry: () => void;
+  singleGame?: boolean;
 }
 
 const getRank = (score: number) => {
@@ -24,7 +25,7 @@ const getRank = (score: number) => {
   return { title: 'NOVICE', color: 'text-rose-400' };
 };
 
-export const Results: React.FC<ResultsProps> = ({ results, onRetry }) => {
+export const Results: React.FC<ResultsProps> = ({ results, onRetry, singleGame }) => {
   const { user, profile } = useAuth();
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [scoreSaved, setScoreSaved] = useState(false);
@@ -69,7 +70,8 @@ export const Results: React.FC<ResultsProps> = ({ results, onRetry }) => {
       await insertScore(user.id, profile.username, scoreMap);
       setScoreSaved(true);
     } catch (e: unknown) {
-      setSaveError(e instanceof Error ? e.message : 'Errore nel salvare lo score.');
+      const msg = e instanceof Error ? e.message : (e as { message?: string })?.message ?? 'Errore sconosciuto.';
+      setSaveError(msg);
       savedRef.current = false;
     }
   };
@@ -197,7 +199,7 @@ export const Results: React.FC<ResultsProps> = ({ results, onRetry }) => {
         {saveError && (
           <div className="text-rose-400 text-xs font-mono">{saveError}</div>
         )}
-        <button onClick={onRetry} className="btn-secondary">Gioca di Nuovo</button>
+        <button onClick={onRetry} className="btn-secondary">{singleGame ? 'Torna alla Home' : 'Gioca di Nuovo'}</button>
         <div className="text-[#88888E] font-mono text-xs border-b border-dashed border-[#444] pb-1 cursor-pointer hover:text-white transition-colors">
           skillcheck.io/vs/{shareCode}
         </div>

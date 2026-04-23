@@ -4,6 +4,7 @@ import { LogOut, Home } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { fetchMyScores } from '../lib/supabase';
 import type { GameScore } from '../types';
+import { GAMES } from '../constants';
 
 interface ProfileProps {
   onHome: () => void;
@@ -58,7 +59,7 @@ export const Profile: React.FC<ProfileProps> = ({ onHome, onSignOut }) => {
         </div>
       </motion.div>
 
-      {/* Storico partite */}
+      {/* Best per-game scores */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -66,17 +67,58 @@ export const Profile: React.FC<ProfileProps> = ({ onHome, onSignOut }) => {
         className="theme-card"
       >
         <h3 className="font-mono text-[11px] uppercase tracking-[3px] text-[#88888E] mb-5">
-          I Miei Score
+          Migliori Score per Gioco
         </h3>
 
         {loading ? (
           <div className="text-center text-[#88888E] text-sm py-8 font-mono">Caricamento...</div>
         ) : scores.length === 0 ? (
-          <div className="text-center text-[#88888E] text-sm py-8 font-mono">
-            Nessuna partita ancora.
-          </div>
+          <div className="text-center text-[#88888E] text-sm py-8 font-mono">Nessuna partita ancora.</div>
         ) : (
-          <div className="space-y-1 max-h-[400px] overflow-y-auto pr-1">
+          <div className="space-y-3">
+            {GAMES.map(game => {
+              const best = scores.reduce((max, s) => {
+                const v = s[game.id as keyof GameScore];
+                return typeof v === 'number' ? Math.max(max, v) : max;
+              }, 0);
+              return (
+                <div key={game.id} className="space-y-1">
+                  <div className="flex justify-between items-end">
+                    <span className="text-[11px] font-mono uppercase tracking-[1px] text-[#88888E]">{game.title}</span>
+                    <span className="font-mono text-sm font-bold">{best > 0 ? best.toLocaleString() : '—'}</span>
+                  </div>
+                  <div className="h-1 bg-[#222] rounded-full overflow-hidden">
+                    <motion.div
+                      initial={{ width: 0 }}
+                      animate={{ width: `${best / 10}%` }}
+                      transition={{ delay: 0.3, duration: 0.8 }}
+                      className="h-full bg-[#00F5FF] rounded-full"
+                    />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </motion.div>
+
+      {/* Storico partite */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.15 }}
+        className="theme-card"
+      >
+        <h3 className="font-mono text-[11px] uppercase tracking-[3px] text-[#88888E] mb-5">
+          Storico Partite
+        </h3>
+
+        {loading ? (
+          <div className="text-center text-[#88888E] text-sm py-8 font-mono">Caricamento...</div>
+        ) : scores.length === 0 ? (
+          <div className="text-center text-[#88888E] text-sm py-8 font-mono">Nessuna partita ancora.</div>
+        ) : (
+          <div className="space-y-1 max-h-[320px] overflow-y-auto pr-1">
             <div className="flex items-center gap-4 px-3 py-1.5 text-[10px] font-mono uppercase tracking-widest text-[#88888E]">
               <span className="w-5 text-right">#</span>
               <span className="flex-1">Data</span>
@@ -90,12 +132,8 @@ export const Profile: React.FC<ProfileProps> = ({ onHome, onSignOut }) => {
                 transition={{ delay: idx * 0.02 }}
                 className="flex items-center gap-4 px-3 py-2.5 rounded-lg hover:bg-white/[0.02] transition-colors"
               >
-                <span className="w-5 text-right font-mono text-[11px] text-[#88888E]">
-                  {idx + 1}
-                </span>
-                <span className="flex-1 text-sm text-[#88888E] font-mono">
-                  {formatDate(row.created_at)}
-                </span>
+                <span className="w-5 text-right font-mono text-[11px] text-[#88888E]">{idx + 1}</span>
+                <span className="flex-1 text-sm text-[#88888E] font-mono">{formatDate(row.created_at)}</span>
                 <span className="w-20 text-right font-mono text-sm font-bold text-white">
                   {row.total_score.toLocaleString()}
                 </span>

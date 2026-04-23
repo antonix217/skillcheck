@@ -5,17 +5,18 @@ import { fetchGlobalLeaderboard, fetchPerGameLeaderboard, fetchMyScores } from '
 import type { GameScore } from '../types';
 import { GAMES } from '../constants';
 
+type Tab = 'global' | 'per-game' | 'my-scores';
+
 interface LeaderboardProps {
   currentUserId?: string;
+  defaultTab?: Tab;
 }
-
-type Tab = 'global' | 'per-game' | 'my-scores';
 
 const formatDate = (iso: string) =>
   new Date(iso).toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: '2-digit' });
 
-export const Leaderboard: React.FC<LeaderboardProps> = ({ currentUserId }) => {
-  const [tab, setTab] = useState<Tab>('global');
+export const Leaderboard: React.FC<LeaderboardProps> = ({ currentUserId, defaultTab = 'global' }) => {
+  const [tab, setTab] = useState<Tab>(defaultTab);
   const [rows, setRows] = useState<GameScore[]>([]);
   const [loading, setLoading] = useState(false);
   const [selectedGame, setSelectedGame] = useState<string>('reaction');

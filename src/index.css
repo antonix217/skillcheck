@@ -1,0 +1,46 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+  --font-display: "Playfair Display", serif;
+}
+
+@layer base {
+  body {
+    @apply bg-[#050505] text-[#FFFFFF] antialiased min-h-screen overflow-x-hidden;
+  }
+}
+
+@layer components {
+  .theme-card {
+    @apply bg-[#0F0F11] border border-[#1A1A1E] rounded-[20px] p-8 shadow-2xl;
+  }
+  
+  .game-container {
+    @apply w-full max-w-4xl mx-auto px-4 py-8 min-h-[600px] flex flex-col items-center justify-center;
+  }
+
+  .btn-primary {
+    @apply px-8 py-4 bg-[#00F5FF] text-[#050505] font-bold rounded-full uppercase tracking-widest transition-all hover:scale-[1.02] active:scale-95 disabled:opacity-50 disabled:pointer-events-none;
+  }
+
+  .btn-secondary {
+    @apply px-8 py-4 border border-[#333] hover:bg-white/5 transition-all text-[#FFFFFF] font-semibold rounded-full uppercase tracking-widest;
+  }
+
+  .percentile-tag {
+    @apply text-[14px] font-semibold text-[#00F5FF] bg-[#00F5FF]/10 px-3 py-1.5 rounded-full inline-block;
+  }
+
+  .skill-bar-bg {
+    @apply h-1 bg-[#222] rounded-full overflow-hidden;
+  }
+  
+  .skill-bar-fill {
+    @apply h-full bg-[#00F5FF] rounded-full;
+  }
+}
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&family=Playfair+Display:ital,wght@1,900&family=JetBrains+Mono:wght@400;500&display=swap');
+

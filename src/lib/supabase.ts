@@ -60,17 +60,18 @@ export async function insertScore(
   username: string,
   scores: Record<string, number>
 ): Promise<void> {
+  const r = (v: number | undefined) => v != null ? Math.round(v) : null;
   const { error } = await supabase.from('game_scores').insert({
     user_id: userId,
     username,
-    total_score: scores.total,
-    reaction: scores.reaction ?? null,
-    aim: scores.aim ?? null,
-    memory: scores.memory ?? null,
-    typing: scores.typing ?? null,
-    math: scores.math ?? null,
-    pattern: scores.pattern ?? null,
-    color: scores.color ?? null,
+    total_score: Math.round(scores.total),
+    reaction: r(scores.reaction),
+    aim: r(scores.aim),
+    memory: r(scores.memory),
+    typing: r(scores.typing),
+    math: r(scores.math),
+    pattern: r(scores.pattern),
+    color: r(scores.color),
   });
   if (error) throw error;
 }
