@@ -68,31 +68,32 @@ export default function App() {
     }
   }, [view, results, singleGameMode]);
 
-  // Dopo OAuth redirect: ripristina risultati e mostra username step se necessario
+  const restorePending = useCallback(() => {
+    const raw = localStorage.getItem('skillcheck_pending');
+    if (!raw) return;
+    try {
+      const { results: saved, singleGame } = JSON.parse(raw);
+      localStorage.removeItem('skillcheck_pending');
+      if (saved?.length > 0) {
+        setResults(saved);
+        setSingleGameMode(singleGame ?? false);
+        setView('results');
+      }
+    } catch { localStorage.removeItem('skillcheck_pending'); }
+  }, []);
+
+  // Dopo OAuth redirect: mostra username step o ripristina risultati
   useEffect(() => {
-    if (loading || !profileLoaded) return; // aspetta che il profilo sia verificato
-    // Utente loggato senza profilo = nuovo signup OAuth → chiedi username
+    if (loading || !profileLoaded) return;
     if (user && !profile) {
       setAuthModalOpen(true);
       return;
     }
-    // Ripristina risultati pending dopo redirect OAuth (una sola volta)
     if (user && profile && !restoredRef.current) {
       restoredRef.current = true;
-      const raw = localStorage.getItem('skillcheck_pending');
-      if (raw) {
-        try {
-          const { results: saved, singleGame } = JSON.parse(raw);
-          localStorage.removeItem('skillcheck_pending');
-          if (saved?.length > 0) {
-            setResults(saved);
-            setSingleGameMode(singleGame ?? false);
-            setView('results');
-          }
-        } catch { localStorage.removeItem('skillcheck_pending'); }
-      }
+      restorePending();
     }
-  }, [loading, profileLoaded, user, profile]);
+  }, [loading, profileLoaded, user, profile, restorePending]);
 
   const handleSignOut = async () => {
     await signOut();
@@ -264,6 +265,7 @@ export default function App() {
       <AuthModal
         isOpen={authModalOpen}
         onClose={() => setAuthModalOpen(false)}
+        onSuccess={() => { setAuthModalOpen(false); restorePending(); }}
       />
     </div>
   );
