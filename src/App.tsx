@@ -26,7 +26,8 @@ export default function App() {
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [singleGameMode, setSingleGameMode] = useState(false);
 
-  const { user, profile, loading, signOut } = useAuth();
+  const { user, profile, loading, profileLoaded, signOut } = useAuth();
+  const restoredRef = React.useRef(false);
 
   const filteredGames = useMemo(() => {
     const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
@@ -69,13 +70,15 @@ export default function App() {
 
   // Dopo OAuth redirect: ripristina risultati e mostra username step se necessario
   useEffect(() => {
-    if (loading) return;
-    // Mostra modal username se utente loggato senza profilo
+    if (loading || !profileLoaded) return; // aspetta che il profilo sia verificato
+    // Utente loggato senza profilo = nuovo signup OAuth → chiedi username
     if (user && !profile) {
       setAuthModalOpen(true);
+      return;
     }
-    // Ripristina risultati pending dopo redirect OAuth
-    if (user && profile) {
+    // Ripristina risultati pending dopo redirect OAuth (una sola volta)
+    if (user && profile && !restoredRef.current) {
+      restoredRef.current = true;
       const raw = localStorage.getItem('skillcheck_pending');
       if (raw) {
         try {
@@ -89,7 +92,7 @@ export default function App() {
         } catch { localStorage.removeItem('skillcheck_pending'); }
       }
     }
-  }, [loading, user, profile]);
+  }, [loading, profileLoaded, user, profile]);
 
   const handleSignOut = async () => {
     await signOut();

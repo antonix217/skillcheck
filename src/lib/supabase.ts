@@ -6,27 +6,37 @@ const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string ?? '';
 
 export const supabase = createClient(supabaseUrl || 'https://placeholder.supabase.co', supabaseAnonKey || 'placeholder');
 
-// Recupera i top 50 punteggi globali
+// Recupera il miglior punteggio per utente (top 50 globali)
 export async function fetchGlobalLeaderboard(): Promise<GameScore[]> {
   const { data, error } = await supabase
     .from('game_scores')
     .select('*')
     .order('total_score', { ascending: false })
-    .limit(50);
+    .limit(500);
   if (error) throw error;
-  return data ?? [];
+  const seen = new Set<string>();
+  return (data ?? []).filter(row => {
+    if (seen.has(row.user_id)) return false;
+    seen.add(row.user_id);
+    return true;
+  }).slice(0, 50);
 }
 
-// Recupera i top 50 punteggi per un gioco specifico
+// Recupera il miglior punteggio per utente per un gioco specifico
 export async function fetchPerGameLeaderboard(gameId: string): Promise<GameScore[]> {
   const { data, error } = await supabase
     .from('game_scores')
     .select('*')
     .not(gameId, 'is', null)
     .order(gameId, { ascending: false })
-    .limit(50);
+    .limit(500);
   if (error) throw error;
-  return data ?? [];
+  const seen = new Set<string>();
+  return (data ?? []).filter(row => {
+    if (seen.has(row.user_id)) return false;
+    seen.add(row.user_id);
+    return true;
+  }).slice(0, 50);
 }
 
 // Recupera i punteggi dell'utente corrente, ordinati per data

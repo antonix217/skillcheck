@@ -8,6 +8,7 @@ export interface AuthState {
   session: Session | null;
   profile: SupabaseProfile | null;
   loading: boolean;
+  profileLoaded: boolean;
   signInWithGoogle: () => Promise<void>;
   signInWithEmail: (email: string, password: string) => Promise<string | null>;
   signUpWithEmail: (email: string, password: string) => Promise<string | null>;
@@ -20,10 +21,12 @@ export function useAuth(): AuthState {
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<SupabaseProfile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [profileLoaded, setProfileLoaded] = useState(false);
 
   const loadProfile = useCallback(async (uid: string) => {
     const p = await fetchProfile(uid);
     setProfile(p);
+    setProfileLoaded(true);
   }, []);
 
   useEffect(() => {
@@ -69,5 +72,5 @@ export function useAuth(): AuthState {
     if (user) await loadProfile(user.id);
   }, [user, loadProfile]);
 
-  return { user, session, profile, loading, signInWithGoogle, signInWithEmail, signUpWithEmail, signOut, refreshProfile };
+  return { user, session, profile, loading, profileLoaded, signInWithGoogle, signInWithEmail, signUpWithEmail, signOut, refreshProfile };
 }
