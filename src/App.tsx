@@ -1,6 +1,7 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import { Landing } from './components/Landing';
 import { Results } from './components/Results';
+import { Profile } from './components/Profile';
 import { GameResult } from './types';
 import { GAMES } from './constants';
 import { AnimatePresence, motion } from 'motion/react';
@@ -16,7 +17,7 @@ import { MathSprint } from './components/games/MathSprint';
 import { PatternScan } from './components/games/PatternScan';
 import { ColorPerception } from './components/games/ColorPerception';
 
-type View = 'landing' | 'game' | 'results';
+type View = 'landing' | 'game' | 'results' | 'profile';
 
 export default function App() {
   const [view, setView] = useState<View>('landing');
@@ -48,6 +49,11 @@ export default function App() {
     }
   }, [activeGameIdx, filteredGames]);
 
+  const handleSignOut = async () => {
+    await signOut();
+    setView('landing');
+  };
+
   const activeGame = filteredGames[activeGameIdx];
 
   const renderGame = () => {
@@ -66,28 +72,23 @@ export default function App() {
   const AuthButton = () => {
     if (user && profile) {
       return (
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2">
-            {user.user_metadata?.avatar_url ? (
-              <img
-                src={user.user_metadata.avatar_url}
-                alt={profile.username}
-                className="w-8 h-8 rounded-full border border-[#333]"
-              />
-            ) : (
-              <div className="w-8 h-8 rounded-full bg-[#00F5FF]/20 border border-[#00F5FF]/30 flex items-center justify-center text-[#00F5FF] text-xs font-bold">
-                {profile.username[0].toUpperCase()}
-              </div>
-            )}
-            <span className="text-[12px] font-mono text-[#88888E]">{profile.username}</span>
-          </div>
-          <button
-            onClick={() => signOut()}
-            className="text-[10px] font-mono uppercase tracking-widest text-[#88888E] hover:text-white transition-colors px-2 py-1 border border-transparent hover:border-[#333] rounded"
-          >
-            Esci
-          </button>
-        </div>
+        <button
+          onClick={() => setView('profile')}
+          className="flex items-center gap-2 hover:opacity-80 transition-opacity"
+        >
+          {user.user_metadata?.avatar_url ? (
+            <img
+              src={user.user_metadata.avatar_url as string}
+              alt={profile.username}
+              className="w-8 h-8 rounded-full border border-[#333]"
+            />
+          ) : (
+            <div className="w-8 h-8 rounded-full bg-[#00F5FF]/20 border border-[#00F5FF]/30 flex items-center justify-center text-[#00F5FF] text-xs font-bold">
+              {profile.username[0].toUpperCase()}
+            </div>
+          )}
+          <span className="text-[12px] font-mono text-[#88888E]">{profile.username}</span>
+        </button>
       );
     }
     return (
@@ -142,7 +143,7 @@ export default function App() {
         )}
       </AnimatePresence>
 
-      {/* Auth floating su landing/risultati */}
+      {/* Auth floating su landing/risultati/profilo */}
       {view !== 'game' && (
         <div className="fixed top-6 right-8 z-40">
           <AuthButton />
@@ -187,6 +188,22 @@ export default function App() {
               className="w-full"
             >
               <Results results={results} onRetry={handleStart} />
+            </motion.div>
+          )}
+
+          {view === 'profile' && (
+            <motion.div
+              key="profile"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+              className="w-full"
+            >
+              <Profile
+                onHome={() => setView('landing')}
+                onSignOut={handleSignOut}
+              />
             </motion.div>
           )}
         </AnimatePresence>
