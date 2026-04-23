@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { Landing } from './components/Landing';
 import { Results } from './components/Results';
 import { Profile } from './components/Profile';
@@ -26,7 +26,7 @@ export default function App() {
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [singleGameMode, setSingleGameMode] = useState(false);
 
-  const { user, profile, signOut } = useAuth();
+  const { user, profile, loading, signOut } = useAuth();
 
   const filteredGames = useMemo(() => {
     const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
@@ -59,6 +59,37 @@ export default function App() {
       setView('results');
     }
   }, [activeGameIdx, filteredGames, singleGameMode]);
+
+  // Salva risultati in localStorage quando si va ai risultati
+  useEffect(() => {
+    if (view === 'results' && results.length > 0) {
+      localStorage.setItem('skillcheck_pending', JSON.stringify({ results, singleGame: singleGameMode }));
+    }
+  }, [view, results, singleGameMode]);
+
+  // Dopo OAuth redirect: ripristina risultati e mostra username step se necessario
+  useEffect(() => {
+    if (loading) return;
+    // Mostra modal username se utente loggato senza profilo
+    if (user && !profile) {
+      setAuthModalOpen(true);
+    }
+    // Ripristina risultati pending dopo redirect OAuth
+    if (user && profile) {
+      const raw = localStorage.getItem('skillcheck_pending');
+      if (raw) {
+        try {
+          const { results: saved, singleGame } = JSON.parse(raw);
+          localStorage.removeItem('skillcheck_pending');
+          if (saved?.length > 0) {
+            setResults(saved);
+            setSingleGameMode(singleGame ?? false);
+            setView('results');
+          }
+        } catch { localStorage.removeItem('skillcheck_pending'); }
+      }
+    }
+  }, [loading, user, profile]);
 
   const handleSignOut = async () => {
     await signOut();
