@@ -97,6 +97,12 @@ export default function App() {
 
   const handleSignOut = async () => {
     await signOut();
+    localStorage.removeItem('skillcheck_pending');
+    setView('landing');
+  };
+
+  const handleHome = () => {
+    localStorage.removeItem('skillcheck_pending');
     setView('landing');
   };
 
@@ -233,7 +239,7 @@ export default function App() {
               transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
               className="w-full"
             >
-              <Results results={results} onRetry={singleGameMode ? () => { setResults([]); setView('game'); } : handleStart} onHome={() => setView('landing')} singleGame={singleGameMode} />
+              <Results results={results} onRetry={singleGameMode ? () => { setResults([]); setView('game'); } : handleStart} onHome={handleHome} singleGame={singleGameMode} />
             </motion.div>
           )}
 

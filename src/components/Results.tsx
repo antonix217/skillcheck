@@ -82,6 +82,7 @@ export const Results: React.FC<ResultsProps> = ({ results, onRetry, onHome, sing
     try {
       await insertScore(user.id, profile.username, scoreMap);
       setScoreSaved(true);
+      localStorage.removeItem('skillcheck_pending');
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : (e as { message?: string })?.message ?? 'Errore sconosciuto.';
       setSaveError(msg);
