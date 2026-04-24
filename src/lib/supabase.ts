@@ -14,7 +14,6 @@ export async function fetchGlobalLeaderboard(): Promise<GameScore[]> {
     .not('reaction', 'is', null)
     .not('aim', 'is', null)
     .not('memory', 'is', null)
-    .not('typing', 'is', null)
     .not('math', 'is', null)
     .not('pattern', 'is', null)
     .not('color', 'is', null)
