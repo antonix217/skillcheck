@@ -91,7 +91,7 @@ export const Leaderboard: React.FC<LeaderboardProps> = ({ currentUserId, default
           {tab === 'my-scores' ? 'Nessun score salvato.' : 'Nessun dato disponibile.'}
         </div>
       ) : (
-        <div className="space-y-1 max-h-[320px] overflow-y-auto pr-1">
+        <div className="space-y-1 max-h-[520px] overflow-y-auto pr-1" style={{ scrollbarWidth: 'thin', scrollbarColor: '#333 transparent' }}>
           {rows.map((row, idx) => {
             const isMe = row.user_id === currentUserId;
             const displayScore = tab === 'per-game' ? (getGameScore(row) ?? 0) : row.total_score;
