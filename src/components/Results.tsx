@@ -14,6 +14,7 @@ import { Leaderboard } from './Leaderboard';
 interface ResultsProps {
   results: GameResult[];
   onRetry: () => void;
+  onHome: () => void;
   singleGame?: boolean;
 }
 
@@ -25,7 +26,7 @@ const getRank = (score: number) => {
   return { title: 'NOVICE', color: 'text-rose-400' };
 };
 
-export const Results: React.FC<ResultsProps> = ({ results, onRetry, singleGame }) => {
+export const Results: React.FC<ResultsProps> = ({ results, onRetry, onHome, singleGame }) => {
   const { user, profile } = useAuth();
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [scoreSaved, setScoreSaved] = useState(false);
@@ -199,7 +200,8 @@ export const Results: React.FC<ResultsProps> = ({ results, onRetry, singleGame }
         {!singleGame && saveError && (
           <div className="text-rose-400 text-xs font-mono">{saveError}</div>
         )}
-        <button onClick={onRetry} className="btn-secondary">{singleGame ? 'Torna alla Home' : 'Gioca di Nuovo'}</button>
+        <button onClick={onRetry} className="btn-secondary">{singleGame ? 'Riprova' : 'Gioca di Nuovo'}</button>
+        <button onClick={onHome} className="btn-secondary">Home</button>
         <div className="text-[#88888E] font-mono text-xs border-b border-dashed border-[#444] pb-1 cursor-pointer hover:text-white transition-colors">
           skillcheck.io/vs/{shareCode}
         </div>

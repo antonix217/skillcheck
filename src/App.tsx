@@ -233,7 +233,7 @@ export default function App() {
               transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
               className="w-full"
             >
-              <Results results={results} onRetry={singleGameMode ? () => setView('landing') : handleStart} singleGame={singleGameMode} />
+              <Results results={results} onRetry={singleGameMode ? () => { setResults([]); setView('game'); } : handleStart} onHome={() => setView('landing')} singleGame={singleGameMode} />
             </motion.div>
           )}
 
