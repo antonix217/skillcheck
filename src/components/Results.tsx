@@ -71,9 +71,14 @@ export const Results: React.FC<ResultsProps> = ({ results, onRetry, onHome, sing
     fetchScorePercentile(totalScore).then(p => setPercentile(100 - p));
   }, [totalScore]);
 
+  // Session key unique to this result set — survives component remount (OAuth redirect)
+  const sessionKey = `skillcheck_saved_${totalScore}_${results.map(r => r.id).join('')}`;
+
   const saveScore = async () => {
     if (!user || !profile || savedRef.current) return;
+    if (sessionStorage.getItem(sessionKey)) { setScoreSaved(true); return; }
     savedRef.current = true;
+    sessionStorage.setItem(sessionKey, '1');
     try {
       await insertScore(user.id, profile.username, scoreMap);
       setScoreSaved(true);
@@ -81,6 +86,7 @@ export const Results: React.FC<ResultsProps> = ({ results, onRetry, onHome, sing
       const msg = e instanceof Error ? e.message : (e as { message?: string })?.message ?? 'Errore sconosciuto.';
       setSaveError(msg);
       savedRef.current = false;
+      sessionStorage.removeItem(sessionKey);
     }
   };
 
@@ -88,7 +94,7 @@ export const Results: React.FC<ResultsProps> = ({ results, onRetry, onHome, sing
     if (!singleGame && user && profile && !scoreSaved && !savedRef.current) {
       saveScore();
     }
-  }, [user, profile]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [user?.id, profile?.username]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleSaveScore = () => {
     if (!user) {
