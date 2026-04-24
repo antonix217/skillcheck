@@ -2,96 +2,113 @@ import React, { useState, useEffect, useRef } from 'react';
 import { GameProps } from '../../types';
 import { motion, AnimatePresence } from 'motion/react';
 
-const TOTAL_TIME = 15;
-const MISS_PENALTY = 20;
+const INITIAL_MS = 30_000;
+const HIT_BONUS_MS = 400;
+const TIER_ADVANCE = 8;   // hits per tier
+const BASE_RADIUS = 50;
+const MIN_RADIUS = 10;
+const R0 = 17;
+
+function tierRadius(totalHits: number): number {
+  const tier = Math.floor(totalHits / TIER_ADVANCE);
+  return Math.max(MIN_RADIUS, BASE_RADIUS - tier * 5);
+}
+
+function targetValue(radius: number): number {
+  return BASE_RADIUS / radius;
+}
 
 export const AimPrecision: React.FC<GameProps> = ({ onComplete }) => {
   const [targetsHit, setTargetsHit] = useState(0);
   const [misses, setMisses] = useState(0);
-  const [timeLeft, setTimeLeft] = useState(TOTAL_TIME);
+  const [timerSec, setTimerSec] = useState(30);
   const [flash, setFlash] = useState(false);
-  const [currentTarget, setCurrentTarget] = useState<{ x: number; y: number; size: number; id: number } | null>(null);
-  const [start, setStart] = useState(false);
-  const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const [currentTarget, setCurrentTarget] = useState<{ x: number; y: number; radius: number; id: number } | null>(null);
+  const [started, setStarted] = useState(false);
+
   const containerRef = useRef<HTMLDivElement>(null);
-  const targetsHitRef = useRef(0);
-  const missesRef = useRef(0);
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const timeLeftRef = useRef(INITIAL_MS);
+  const hitsRef = useRef(0);
+  const rawScoreRef = useRef(0);   // Σ targetValue(hits) - 0.3 * Σ targetValue(misses)
   const finishedRef = useRef(false);
 
-  const finish = (hits: number, totalMisses: number) => {
+  const finish = () => {
     if (finishedRef.current) return;
     finishedRef.current = true;
     if (timerRef.current) clearInterval(timerRef.current);
-    const score = Math.max(0, Math.min(1000, hits * 40 - totalMisses * MISS_PENALTY));
-    onComplete(score, hits);
+    const raw = Math.max(0.01, rawScoreRef.current);
+    const score = Math.round(500 * Math.log2(raw / R0 + 1));
+    onComplete(score, hitsRef.current);
   };
 
   const spawnTarget = () => {
-    if (containerRef.current) {
-      const rect = containerRef.current.getBoundingClientRect();
-      const margin = 60;
-      const size = Math.random() * 30 + 30;
-      const x = margin + Math.random() * (rect.width - margin * 2);
-      const y = margin + Math.random() * (rect.height - margin * 2);
-      setCurrentTarget({ x, y, size, id: Math.random() });
-    }
+    if (!containerRef.current) return;
+    const rect = containerRef.current.getBoundingClientRect();
+    const radius = tierRadius(hitsRef.current);
+    const margin = radius + 8;
+    const x = margin + Math.random() * (rect.width - margin * 2);
+    const y = margin + Math.random() * (rect.height - margin * 2);
+    setCurrentTarget({ x, y, radius, id: Math.random() });
   };
 
   const handleHit = (e: React.MouseEvent) => {
     e.stopPropagation();
-    const next = targetsHitRef.current + 1;
-    targetsHitRef.current = next;
-    setTargetsHit(next);
+    if (!currentTarget) return;
+    const val = targetValue(currentTarget.radius);
+    rawScoreRef.current += val;
+    hitsRef.current += 1;
+    setTargetsHit(h => h + 1);
+    timeLeftRef.current = Math.min(INITIAL_MS, timeLeftRef.current + HIT_BONUS_MS);
     spawnTarget();
   };
 
   const handleMiss = () => {
-    const next = missesRef.current + 1;
-    missesRef.current = next;
-    setMisses(next);
+    if (!currentTarget) return;
+    const val = targetValue(currentTarget.radius);
+    rawScoreRef.current -= 0.3 * val;
+    setMisses(m => m + 1);
     setFlash(true);
-    setTimeout(() => setFlash(false), 300);
+    setTimeout(() => setFlash(false), 250);
   };
 
   const handleStart = () => {
-    setStart(true);
+    setStarted(true);
     spawnTarget();
     timerRef.current = setInterval(() => {
-      setTimeLeft(prev => {
-        if (prev === 1) {
-          finish(targetsHitRef.current, missesRef.current);
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
+      timeLeftRef.current -= 100;
+      setTimerSec(Math.max(0, Math.ceil(timeLeftRef.current / 1000)));
+      if (timeLeftRef.current <= 0) finish();
+    }, 100);
   };
 
-  useEffect(() => {
-    return () => { if (timerRef.current) clearInterval(timerRef.current); };
-  }, []);
+  useEffect(() => () => { if (timerRef.current) clearInterval(timerRef.current); }, []);
+
+  const currentTier = Math.floor(hitsRef.current / TIER_ADVANCE) + 1;
 
   return (
     <div
       ref={containerRef}
-      onClick={start ? handleMiss : undefined}
+      onClick={started ? handleMiss : undefined}
       className="w-full h-full min-h-[500px] theme-card relative overflow-hidden flex items-center justify-center"
     >
-      {!start ? (
+      {!started ? (
         <div className="text-center p-8">
           <h2 className="text-4xl font-bold mb-4 font-mono">AIM PRECISION</h2>
-          <p className="text-xl opacity-60 mb-8">Hit as many targets as you can in {TOTAL_TIME}s — misses penalize score</p>
+          <p className="text-xl opacity-60 mb-2">Hit targets before time runs out.</p>
+          <p className="text-sm opacity-40 mb-8">Targets shrink as you hit more · each hit +0.4s</p>
           <button onClick={(e) => { e.stopPropagation(); handleStart(); }} className="btn-primary">Start</button>
         </div>
       ) : (
         <>
           {flash && (
-            <div className="absolute inset-0 pointer-events-none z-10 border-4 border-[#FF4E00] shadow-[inset_0_0_60px_rgba(255,78,0,0.4)] rounded-inherit transition-opacity" />
+            <div className="absolute inset-0 pointer-events-none z-10 border-4 border-[#FF4E00] shadow-[inset_0_0_60px_rgba(255,78,0,0.4)] rounded-inherit" />
           )}
-          <div className="absolute top-4 left-4 font-mono text-[#00F5FF] text-sm flex gap-6">
-            <span>TIME: {timeLeft}s</span>
-            <span>HIT: {targetsHit}</span>
-            <span className="text-[#FF4E00]">MISS: {misses}</span>
+          <div className="absolute top-4 left-4 font-mono text-sm flex gap-6 z-20">
+            <span className={timerSec <= 5 ? 'text-[#FF4E00]' : 'text-[#00F5FF]'}>TIME: {timerSec}s</span>
+            <span className="text-white/70">HIT: {targetsHit}</span>
+            <span className="text-[#FF4E00]/70">MISS: {misses}</span>
+            <span className="text-[#88888E] text-xs self-center">T{currentTier}</span>
           </div>
           <AnimatePresence>
             {currentTarget && (
@@ -104,10 +121,10 @@ export const AimPrecision: React.FC<GameProps> = ({ onComplete }) => {
                 onClick={handleHit}
                 className="absolute rounded-full flex items-center justify-center cursor-crosshair bg-[#00F5FF] shadow-[0_0_20px_rgba(0,245,255,0.4)]"
                 style={{
-                  left: currentTarget.x - currentTarget.size / 2,
-                  top: currentTarget.y - currentTarget.size / 2,
-                  width: currentTarget.size,
-                  height: currentTarget.size,
+                  left: currentTarget.x - currentTarget.radius,
+                  top: currentTarget.y - currentTarget.radius,
+                  width: currentTarget.radius * 2,
+                  height: currentTarget.radius * 2,
                 }}
               >
                 <div className="w-1/3 h-1/3 bg-white rounded-full opacity-50" />

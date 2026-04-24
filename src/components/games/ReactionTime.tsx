@@ -2,115 +2,147 @@ import React, { useState, useEffect, useRef } from 'react';
 import { GameProps } from '../../types';
 import { motion, AnimatePresence } from 'motion/react';
 
-type State = 'waiting' | 'ready' | 'clicking' | 'result' | 'early';
+type Phase = 'intro' | 'ready' | 'go' | 'result' | 'early';
+
+const INITIAL_MS = 45_000;
+const HIT_BONUS_MS = 2_500;
+const FALSE_START_MS = 2_000;
+const R0 = 60;
 
 export const ReactionTime: React.FC<GameProps> = ({ onComplete }) => {
-  const [state, setState] = useState<State>('waiting');
-  const [results, setResults] = useState<number[]>([]);
-  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const autoAdvanceRef = useRef<NodeJS.Timeout | null>(null);
-  const startTimeRef = useRef<number>(0);
+  const [phase, setPhase] = useState<Phase>('intro');
+  const [hits, setHits] = useState(0);
+  const [falseStarts, setFalseStarts] = useState(0);
+  const [timerSec, setTimerSec] = useState(45);
+  const [lastRt, setLastRt] = useState<number | null>(null);
+
+  const timeLeftRef = useRef(INITIAL_MS);
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const waitRef = useRef<NodeJS.Timeout | null>(null);
+  const rtStartRef = useRef(0);
+  const speedSumRef = useRef(0);
+  const falseStartsRef = useRef(0);
+  const allRtsRef = useRef<number[]>([]);
+  const finishedRef = useRef(false);
+
+  const finish = () => {
+    if (finishedRef.current) return;
+    finishedRef.current = true;
+    if (intervalRef.current) clearInterval(intervalRef.current);
+    if (waitRef.current) clearTimeout(waitRef.current);
+    const raw = Math.max(0.01, speedSumRef.current - 3 * falseStartsRef.current);
+    const score = Math.round(500 * Math.log2(raw / R0 + 1));
+    const sorted = [...allRtsRef.current].sort((a, b) => a - b);
+    const median = sorted.length > 0 ? sorted[Math.floor(sorted.length / 2)] : 999;
+    onComplete(score, Math.round(median));
+  };
+
+  const startTimer = () => {
+    intervalRef.current = setInterval(() => {
+      timeLeftRef.current -= 100;
+      setTimerSec(Math.max(0, Math.ceil(timeLeftRef.current / 1000)));
+      if (timeLeftRef.current <= 0) finish();
+    }, 100);
+  };
 
   const startRound = () => {
-    setState('ready');
-    const delay = Math.random() * 3500 + 1500;
-    timeoutRef.current = setTimeout(() => {
-      setState('clicking');
-      startTimeRef.current = performance.now();
+    setPhase('ready');
+    const delay = 1500 + Math.random() * 3000;
+    waitRef.current = setTimeout(() => {
+      setPhase('go');
+      rtStartRef.current = performance.now();
     }, delay);
   };
 
   const handleClick = () => {
-    if (state === 'waiting') {
+    if (phase === 'intro') {
+      startTimer();
       startRound();
-    } else if (state === 'ready') {
-      if (timeoutRef.current) clearTimeout(timeoutRef.current);
-      setState('early');
-    } else if (state === 'clicking') {
-      const reactionTime = performance.now() - startTimeRef.current;
-      const newResults = [...results, reactionTime];
-      setResults(newResults);
-      setState('result');
-      if (newResults.length >= 5) {
-        const median = newResults.sort((a,b) => a - b)[2];
-        const normalized = Math.round(Math.max(0, Math.min(1000, 1000 - (median - 200) * 3)));
-        setTimeout(() => onComplete(normalized, Math.round(median)), 1000);
-      } else {
-        autoAdvanceRef.current = setTimeout(() => startRound(), 3000);
-      }
-    } else if (state === 'result' || state === 'early') {
-      if (autoAdvanceRef.current) clearTimeout(autoAdvanceRef.current);
+    } else if (phase === 'ready') {
+      clearTimeout(waitRef.current!);
+      timeLeftRef.current = Math.max(0, timeLeftRef.current - FALSE_START_MS);
+      falseStartsRef.current += 1;
+      setFalseStarts(f => f + 1);
+      setPhase('early');
+    } else if (phase === 'go') {
+      const rt = performance.now() - rtStartRef.current;
+      allRtsRef.current.push(rt);
+      speedSumRef.current += 1000 / rt;
+      setHits(h => h + 1);
+      setLastRt(rt);
+      timeLeftRef.current = Math.min(INITIAL_MS, timeLeftRef.current + HIT_BONUS_MS);
+      setPhase('result');
+      waitRef.current = setTimeout(() => startRound(), 700);
+    } else if (phase === 'result' || phase === 'early') {
+      clearTimeout(waitRef.current!);
       startRound();
     }
   };
 
-  useEffect(() => {
-    return () => {
-      if (timeoutRef.current) clearTimeout(timeoutRef.current);
-      if (autoAdvanceRef.current) clearTimeout(autoAdvanceRef.current);
-    };
+  useEffect(() => () => {
+    if (intervalRef.current) clearInterval(intervalRef.current);
+    if (waitRef.current) clearTimeout(waitRef.current);
   }, []);
 
   return (
-    <div 
-      className={`w-full h-full flex flex-col items-center justify-center cursor-pointer select-none ${
-        state === 'clicking' ? 'bg-[#00F5FF]' : 
-        state === 'ready' ? 'bg-[#FF4E00]' : 
+    <div
+      className={`w-full h-full min-h-[500px] flex flex-col items-center justify-center cursor-pointer select-none relative ${
+        phase === 'go' ? 'bg-[#00F5FF]' :
+        phase === 'ready' ? 'bg-[#FF4E00]' :
         'bg-[#0F0F11]'
       }`}
       onClick={handleClick}
     >
-      {state === 'clicking' ? (
+      {phase !== 'intro' && (
+        <div className="absolute top-6 inset-x-0 flex justify-center gap-12 pointer-events-none">
+          <span className={`font-mono text-sm ${timerSec <= 5 ? 'text-[#FF4E00]' : 'text-white/50'}`}>
+            {timerSec}s
+          </span>
+          <span className="font-mono text-sm text-white/50">{hits} hits</span>
+          {falseStarts > 0 && (
+            <span className="font-mono text-sm text-[#FF4E00]/60">{falseStarts} false start</span>
+          )}
+        </div>
+      )}
+
+      {phase === 'go' ? (
         <h2 className="text-8xl font-black text-[#050505]">ENGAGE!</h2>
       ) : (
         <AnimatePresence mode="wait">
           <motion.div
-            key={state}
+            key={phase}
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
             className="text-center"
           >
-            {state === 'waiting' && (
+            {phase === 'intro' && (
               <div>
                 <h2 className="text-5xl font-black mb-4 uppercase tracking-tighter">REACTION TIME</h2>
-                <p className="text-xl text-[#88888E] font-light">Wait for target color change, then react instantly.</p>
-                <p className="mt-12 text-[#00F5FF] font-mono text-sm tracking-[4px] uppercase animate-pulse">Click to Start Analysis</p>
+                <p className="text-xl text-[#88888E] font-light">Click the instant the screen turns cyan.</p>
+                <p className="text-sm text-[#88888E]/50 mt-2">45s timer · each hit +2.5s · false start −2s</p>
+                <p className="mt-12 text-[#00F5FF] font-mono text-sm tracking-[4px] uppercase animate-pulse">Click to Start</p>
               </div>
             )}
-            {state === 'ready' && (
+            {phase === 'ready' && (
               <h2 className="text-7xl font-black text-black">STAND BY...</h2>
             )}
-            {state === 'early' && (
+            {phase === 'early' && (
               <div className="text-white">
                 <h2 className="text-7xl font-black italic">ABORTED.</h2>
-                <p className="text-2xl mt-4 font-mono opacity-60">False start detected. Try again.</p>
+                <p className="text-2xl mt-4 font-mono opacity-60">False start — −2s</p>
               </div>
             )}
-            {state === 'result' && (
+            {phase === 'result' && lastRt !== null && (
               <div className="text-white">
                 <h2 className="text-8xl font-mono font-black italic">
-                  {results[results.length - 1].toFixed(0)}<span className="text-3xl not-italic ml-2 opacity-50">ms</span>
+                  {lastRt.toFixed(0)}<span className="text-3xl not-italic ml-2 opacity-50">ms</span>
                 </h2>
-                <p className="text-sm mt-6 font-mono opacity-40 uppercase tracking-widest">
-                  Round {results.length} / 5
-                </p>
               </div>
             )}
           </motion.div>
         </AnimatePresence>
       )}
-
-      <div className="absolute bottom-12 flex gap-4">
-        {[...Array(5)].map((_, i) => (
-          <div 
-            key={i} 
-            className={`w-12 h-1 transition-all duration-500 overflow-hidden bg-white/10`}
-          >
-             <div className={`h-full bg-[#00F5FF] transition-transform duration-500 ${results.length > i ? 'translate-x-0' : '-translate-x-full'}`} />
-          </div>
-        ))}
-      </div>
     </div>
   );
 };

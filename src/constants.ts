@@ -7,17 +7,17 @@ export const GAMES: { id: GameId; title: string; description: string; unit: stri
     description: 'When the screen turns GREEN, click as fast as you can.',
     unit: 'ms'
   },
-  { 
-    id: 'aim', 
-    title: 'Aim Precision', 
+  {
+    id: 'aim',
+    title: 'Aim Precision',
     description: 'Click the targets as they appear on the screen. Be fast and precise.',
-    unit: 'score'
+    unit: ' hits'
   },
-  { 
-    id: 'memory', 
-    title: 'Visual Memory', 
-    description: 'Watch the grid sequence and repeat it accurately.',
-    unit: 'level'
+  {
+    id: 'memory',
+    title: 'Visual Memory',
+    description: 'Watch the grid sequence and repeat it accurately. Grid expands at higher levels.',
+    unit: ' lvl'
   },
   { 
     id: 'typing', 
@@ -25,23 +25,23 @@ export const GAMES: { id: GameId; title: string; description: string; unit: stri
     description: 'Type the displayed text as fast and accurately as possible.',
     unit: 'WPM'
   },
-  { 
-    id: 'math', 
-    title: 'Math Sprint', 
-    description: 'Solve as many simple math problems as you can in 30 seconds.',
-    unit: 'points'
+  {
+    id: 'math',
+    title: 'Math Sprint',
+    description: 'Solve as many math problems as you can in 60 seconds. Difficulty escalates.',
+    unit: ' solved'
   },
-  { 
-    id: 'pattern', 
-    title: 'Pattern Scan', 
-    description: 'Find and click the specific symbol in the grid.',
-    unit: 'ms'
+  {
+    id: 'pattern',
+    title: 'Pattern Scan',
+    description: 'Find and click the unique symbol in the grid. Grids grow indefinitely.',
+    unit: ' lvls'
   },
-  { 
-    id: 'color', 
-    title: 'Color Perception', 
-    description: 'Identify the square with a slightly different shade of color.',
-    unit: 'level'
+  {
+    id: 'color',
+    title: 'Color Perception',
+    description: 'Identify the square with a slightly different shade. Differences become subtler each level.',
+    unit: ' lvl'
   }
 ];
 

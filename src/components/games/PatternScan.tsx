@@ -3,28 +3,29 @@ import { GameProps } from '../../types';
 
 const SYMBOLS = ['●', '■', '▲', '◆', '★', '♥', '♣', '♠', '✖', '✚'];
 const STAGE_TIME = 7;
-const MAX_LEVELS = 10;
+const R0 = 65;
 
 export const PatternScan: React.FC<GameProps> = ({ onComplete }) => {
   const [level, setLevel] = useState(1);
   const [grid, setGrid] = useState<string[]>([]);
   const [target, setTarget] = useState('');
-  const [start, setStart] = useState(false);
+  const [started, setStarted] = useState(false);
   const [timeLeft, setTimeLeft] = useState(STAGE_TIME);
   const [failed, setFailed] = useState(false);
-  const totalTimeRef = useRef(0);
+
+  const rawRef = useRef(0); // Σ gridArea * timeBonus
   const levelRef = useRef(1);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
-  const containerStartTimeRef = useRef<number>(0);
+  const levelStartRef = useRef<number>(0);
   const finishedRef = useRef(false);
 
-  const finishGame = (total: number, levels: number) => {
+  const finishGame = () => {
     if (finishedRef.current) return;
     finishedRef.current = true;
     if (timerRef.current) clearInterval(timerRef.current);
-    const avg = total / levels;
-    const score = Math.round(Math.max(0, Math.min(1000, 1000 - (avg - 500) * 0.66)));
-    onComplete(score, Math.round(avg));
+    const raw = Math.max(0.01, rawRef.current);
+    const score = Math.round(500 * Math.log2(raw / R0 + 1));
+    onComplete(score, levelRef.current - 1); // levels completed
   };
 
   const startTimer = () => {
@@ -36,62 +37,61 @@ export const PatternScan: React.FC<GameProps> = ({ onComplete }) => {
   };
 
   const generateGrid = (lvl: number) => {
-    const size = lvl + 2;
-    const total = size * size;
+    const side = lvl + 2;
+    const total = side * side;
     const newTarget = SYMBOLS[Math.floor(Math.random() * SYMBOLS.length)];
-    const otherSymbols = SYMBOLS.filter(s => s !== newTarget);
+    const others = SYMBOLS.filter(s => s !== newTarget);
     const newGrid = Array(total).fill(null).map(() =>
-      otherSymbols[Math.floor(Math.random() * otherSymbols.length)]
+      others[Math.floor(Math.random() * others.length)]
     );
     newGrid[Math.floor(Math.random() * total)] = newTarget;
     setTarget(newTarget);
     setGrid(newGrid);
-    containerStartTimeRef.current = performance.now();
+    levelStartRef.current = performance.now();
     startTimer();
   };
 
   const handleStart = () => {
-    setStart(true);
+    setStarted(true);
     levelRef.current = 1;
     generateGrid(1);
   };
 
   const handleItemClick = (symbol: string) => {
     if (symbol !== target) return;
-    const stepTime = performance.now() - containerStartTimeRef.current;
-    totalTimeRef.current += stepTime;
-    if (levelRef.current >= MAX_LEVELS) {
-      finishGame(totalTimeRef.current, MAX_LEVELS);
-    } else {
-      const nextLevel = levelRef.current + 1;
-      levelRef.current = nextLevel;
-      setLevel(nextLevel);
-      generateGrid(nextLevel);
-    }
+    const rt = performance.now() - levelStartRef.current;
+    const side = levelRef.current + 2;
+    const gridArea = side * side;
+    const timeBonus = Math.max(0, (STAGE_TIME * 1000 - rt) / (STAGE_TIME * 1000));
+    rawRef.current += gridArea * timeBonus;
+
+    const next = levelRef.current + 1;
+    levelRef.current = next;
+    setLevel(next);
+    generateGrid(next);
   };
 
   useEffect(() => {
-    if (!start || timeLeft > 0) return;
+    if (!started || timeLeft > 0) return;
     clearInterval(timerRef.current!);
     setFailed(true);
-    const t = window.setTimeout(() => {
-      finishGame(totalTimeRef.current + STAGE_TIME * 1000, Math.max(1, levelRef.current));
-    }, 1200);
-  }, [timeLeft, start]);
+    const t = window.setTimeout(() => finishGame(), 1200);
+    return () => clearTimeout(t);
+  }, [timeLeft, started]);
 
-  useEffect(() => {
-    return () => { if (timerRef.current) clearInterval(timerRef.current); };
-  }, []);
+  useEffect(() => () => { if (timerRef.current) clearInterval(timerRef.current); }, []);
 
-  const cellSize = Math.max(32, Math.min(56, Math.floor(480 / (level + 2))));
-  const gridWidth = cellSize * (level + 2) + 8 * (level + 1);
+  const side = level + 2;
+  const cellSize = Math.max(28, Math.min(52, Math.floor(460 / side)));
+  const gridWidth = cellSize * side + 8 * (side - 1);
 
   return (
     <div className="w-full h-full flex flex-col items-center justify-center gap-8 relative">
-      {!start ? (
+      {!started ? (
         <div className="text-center p-8">
           <h2 className="text-4xl font-bold mb-4 font-mono">PATTERN SCAN</h2>
-          <p className="text-xl opacity-60 mb-8">Find the unique symbol — {STAGE_TIME}s per stage</p>
+          <p className="text-xl opacity-60 mb-2">Find the unique symbol — {STAGE_TIME}s per stage</p>
+          <p className="text-sm opacity-40 mb-8">Grid grows indefinitely — survive as long as you can</p>
           <button onClick={handleStart} className="btn-primary">Start</button>
         </div>
       ) : (
@@ -104,7 +104,7 @@ export const PatternScan: React.FC<GameProps> = ({ onComplete }) => {
           <div className="flex items-center justify-center gap-8">
             <div className="text-sm font-mono text-[#88888E] uppercase tracking-widest">Target:</div>
             <div className="text-6xl text-[#00F5FF] font-black">{target}</div>
-            <div className="text-sm font-mono text-[#88888E] uppercase tracking-widest">Stage {level}/{MAX_LEVELS}</div>
+            <div className="text-sm font-mono text-[#88888E] uppercase tracking-widest">Stage {level}</div>
             <div className={`text-sm font-mono uppercase tracking-widest ${timeLeft <= 2 ? 'text-[#FF4E00]' : 'text-[#88888E]'}`}>
               {timeLeft}s
             </div>
@@ -113,7 +113,7 @@ export const PatternScan: React.FC<GameProps> = ({ onComplete }) => {
           <div
             className="grid gap-2"
             style={{
-              gridTemplateColumns: `repeat(${level + 2}, ${cellSize}px)`,
+              gridTemplateColumns: `repeat(${side}, ${cellSize}px)`,
               width: `${gridWidth}px`,
             }}
           >
@@ -122,7 +122,7 @@ export const PatternScan: React.FC<GameProps> = ({ onComplete }) => {
                 key={i}
                 onClick={() => handleItemClick(symbol)}
                 style={{ width: cellSize, height: cellSize }}
-                className="bg-white/[0.03] hover:bg-white/10 border border-[#1A1A1E] rounded-lg flex items-center justify-center text-2xl transition-colors"
+                className="bg-white/[0.03] hover:bg-white/10 border border-[#1A1A1E] rounded-lg flex items-center justify-center text-xl transition-colors"
               >
                 {symbol}
               </button>

@@ -19,10 +19,10 @@ interface ResultsProps {
 }
 
 const getRank = (score: number) => {
-  if (score > 900) return { title: 'ELITE', color: 'text-cyan-400' };
-  if (score > 750) return { title: 'PRO', color: 'text-emerald-400' };
-  if (score > 550) return { title: 'STRONG', color: 'text-yellow-400' };
-  if (score > 350) return { title: 'AVERAGE', color: 'text-white/60' };
+  if (score >= 1400) return { title: 'ELITE', color: 'text-cyan-400' };
+  if (score >= 1000) return { title: 'PRO', color: 'text-emerald-400' };
+  if (score >= 700) return { title: 'STRONG', color: 'text-yellow-400' };
+  if (score >= 400) return { title: 'AVERAGE', color: 'text-white/60' };
   return { title: 'NOVICE', color: 'text-rose-400' };
 };
 
@@ -34,10 +34,17 @@ export const Results: React.FC<ResultsProps> = ({ results, onRetry, onHome, sing
   const [percentile, setPercentile] = useState<number | null>(null);
   const savedRef = useRef(false);
 
-  const totalScore = useMemo(() =>
-    Math.round(results.reduce((acc, r) => acc + r.score, 0) / results.length),
-    [results]
-  );
+  const WEIGHTS: Record<string, number> = {
+    reaction: 0.12, aim: 0.10, memory: 0.20,
+    typing: 0.13, math: 0.20, pattern: 0.13, color: 0.12,
+  };
+
+  const totalScore = useMemo(() => {
+    if (results.length === 7) {
+      return Math.round(results.reduce((acc, r) => acc + r.score * (WEIGHTS[r.id] ?? 1 / 7), 0));
+    }
+    return Math.round(results.reduce((acc, r) => acc + r.score, 0) / results.length);
+  }, [results]);
 
   const rank = getRank(totalScore);
 
@@ -45,7 +52,7 @@ export const Results: React.FC<ResultsProps> = ({ results, onRetry, onHome, sing
     results.map(r => ({
       subject: GAMES.find(g => g.id === r.id)?.title ?? r.id,
       A: r.score,
-      fullMark: 1000,
+      fullMark: Math.max(1200, ...results.map(r => r.score)),
     })),
     [results]
   );
@@ -97,7 +104,7 @@ export const Results: React.FC<ResultsProps> = ({ results, onRetry, onHome, sing
 
   const percentileDisplay = percentile !== null
     ? `TOP ${percentile.toFixed(1)}%`
-    : `TOP ~${(100 - totalScore / 10).toFixed(1)}%`;
+    : `TOP ~${Math.max(1, 100 * Math.pow(2, -totalScore / 500)).toFixed(1)}%`;
 
   const shareCode = useMemo(() => Math.random().toString(36).substring(7), []);
 
@@ -136,7 +143,7 @@ export const Results: React.FC<ResultsProps> = ({ results, onRetry, onHome, sing
             <RadarChart cx="50%" cy="50%" outerRadius="70%" data={chartData}>
               <PolarGrid stroke="#222" />
               <PolarAngleAxis dataKey="subject" tick={{ fill: '#88888E', fontSize: 10, fontWeight: 500 }} />
-              <PolarRadiusAxis domain={[0, 1000]} tick={false} axisLine={false} />
+              <PolarRadiusAxis domain={[0, Math.max(1200, ...results.map(r => r.score))]} tick={false} axisLine={false} />
               <Radar name="Score" dataKey="A" stroke="#00F5FF" fill="#00F5FF" fillOpacity={0.2} strokeWidth={2} />
             </RadarChart>
           </ResponsiveContainer>
