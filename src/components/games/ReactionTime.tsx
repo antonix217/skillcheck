@@ -4,45 +4,37 @@ import { motion, AnimatePresence } from 'motion/react';
 
 type Phase = 'intro' | 'ready' | 'go' | 'result' | 'early';
 
-const INITIAL_MS = 45_000;
-const HIT_BONUS_MS = 2_500;
-const FALSE_START_MS = 2_000;
-const R0 = 60;
+const ROUNDS = 4;
+// R0 = 4.0 → average speed at 250ms (1000/250 = 4.0) × 4 rounds / 4 = 4.0
+const R0 = 4.0;
 
 export const ReactionTime: React.FC<GameProps> = ({ onComplete }) => {
   const [phase, setPhase] = useState<Phase>('intro');
-  const [hits, setHits] = useState(0);
+  const [roundsDone, setRoundsDone] = useState(0);
   const [falseStarts, setFalseStarts] = useState(0);
-  const [timerSec, setTimerSec] = useState(45);
   const [lastRt, setLastRt] = useState<number | null>(null);
 
-  const timeLeftRef = useRef(INITIAL_MS);
-  const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const waitRef = useRef<NodeJS.Timeout | null>(null);
+  const advanceRef = useRef<NodeJS.Timeout | null>(null);
   const rtStartRef = useRef(0);
   const speedSumRef = useRef(0);
   const falseStartsRef = useRef(0);
   const allRtsRef = useRef<number[]>([]);
+  const roundsDoneRef = useRef(0);
   const finishedRef = useRef(false);
 
   const finish = () => {
     if (finishedRef.current) return;
     finishedRef.current = true;
-    if (intervalRef.current) clearInterval(intervalRef.current);
-    if (waitRef.current) clearTimeout(waitRef.current);
-    const raw = Math.max(0.01, speedSumRef.current - 3 * falseStartsRef.current);
+    clearTimeout(waitRef.current!);
+    clearTimeout(advanceRef.current!);
+    // average speed per round, minus false-start penalty
+    const avgSpeed = speedSumRef.current / ROUNDS;
+    const raw = Math.max(0.01, avgSpeed - falseStartsRef.current * 0.3);
     const score = Math.round(500 * Math.log2(raw / R0 + 1));
     const sorted = [...allRtsRef.current].sort((a, b) => a - b);
-    const median = sorted.length > 0 ? sorted[Math.floor(sorted.length / 2)] : 999;
+    const median = sorted[Math.floor(sorted.length / 2)] ?? 999;
     onComplete(score, Math.round(median));
-  };
-
-  const startTimer = () => {
-    intervalRef.current = setInterval(() => {
-      timeLeftRef.current -= 100;
-      setTimerSec(Math.max(0, Math.ceil(timeLeftRef.current / 1000)));
-      if (timeLeftRef.current <= 0) finish();
-    }, 100);
   };
 
   const startRound = () => {
@@ -56,11 +48,9 @@ export const ReactionTime: React.FC<GameProps> = ({ onComplete }) => {
 
   const handleClick = () => {
     if (phase === 'intro') {
-      startTimer();
       startRound();
     } else if (phase === 'ready') {
       clearTimeout(waitRef.current!);
-      timeLeftRef.current = Math.max(0, timeLeftRef.current - FALSE_START_MS);
       falseStartsRef.current += 1;
       setFalseStarts(f => f + 1);
       setPhase('early');
@@ -68,20 +58,29 @@ export const ReactionTime: React.FC<GameProps> = ({ onComplete }) => {
       const rt = performance.now() - rtStartRef.current;
       allRtsRef.current.push(rt);
       speedSumRef.current += 1000 / rt;
-      setHits(h => h + 1);
+      roundsDoneRef.current += 1;
+      setRoundsDone(r => r + 1);
       setLastRt(rt);
-      timeLeftRef.current = Math.min(INITIAL_MS, timeLeftRef.current + HIT_BONUS_MS);
-      setPhase('result');
-      waitRef.current = setTimeout(() => startRound(), 700);
+      if (roundsDoneRef.current >= ROUNDS) {
+        setPhase('result');
+        advanceRef.current = setTimeout(() => finish(), 1000);
+      } else {
+        setPhase('result');
+        advanceRef.current = setTimeout(() => startRound(), 800);
+      }
     } else if (phase === 'result' || phase === 'early') {
-      clearTimeout(waitRef.current!);
-      startRound();
+      clearTimeout(advanceRef.current!);
+      if (roundsDoneRef.current >= ROUNDS) {
+        finish();
+      } else {
+        startRound();
+      }
     }
   };
 
   useEffect(() => () => {
-    if (intervalRef.current) clearInterval(intervalRef.current);
-    if (waitRef.current) clearTimeout(waitRef.current);
+    clearTimeout(waitRef.current!);
+    clearTimeout(advanceRef.current!);
   }, []);
 
   return (
@@ -93,24 +92,12 @@ export const ReactionTime: React.FC<GameProps> = ({ onComplete }) => {
       }`}
       onClick={handleClick}
     >
-      {phase !== 'intro' && (
-        <div className="absolute top-6 inset-x-0 flex justify-center gap-12 pointer-events-none">
-          <span className={`font-mono text-sm ${timerSec <= 5 ? 'text-[#FF4E00]' : 'text-white/50'}`}>
-            {timerSec}s
-          </span>
-          <span className="font-mono text-sm text-white/50">{hits} hits</span>
-          {falseStarts > 0 && (
-            <span className="font-mono text-sm text-[#FF4E00]/60">{falseStarts} false start</span>
-          )}
-        </div>
-      )}
-
       {phase === 'go' ? (
         <h2 className="text-8xl font-black text-[#050505]">ENGAGE!</h2>
       ) : (
         <AnimatePresence mode="wait">
           <motion.div
-            key={phase}
+            key={phase + roundsDone}
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
@@ -120,7 +107,7 @@ export const ReactionTime: React.FC<GameProps> = ({ onComplete }) => {
               <div>
                 <h2 className="text-5xl font-black mb-4 uppercase tracking-tighter">REACTION TIME</h2>
                 <p className="text-xl text-[#88888E] font-light">Click the instant the screen turns cyan.</p>
-                <p className="text-sm text-[#88888E]/50 mt-2">45s timer · each hit +2.5s · false start −2s</p>
+                <p className="text-sm text-[#88888E]/50 mt-2">{ROUNDS} rounds · false start penalizes score</p>
                 <p className="mt-12 text-[#00F5FF] font-mono text-sm tracking-[4px] uppercase animate-pulse">Click to Start</p>
               </div>
             )}
@@ -130,7 +117,7 @@ export const ReactionTime: React.FC<GameProps> = ({ onComplete }) => {
             {phase === 'early' && (
               <div className="text-white">
                 <h2 className="text-7xl font-black italic">ABORTED.</h2>
-                <p className="text-2xl mt-4 font-mono opacity-60">False start — −2s</p>
+                <p className="text-2xl mt-4 font-mono opacity-60">False start — score penalized</p>
               </div>
             )}
             {phase === 'result' && lastRt !== null && (
@@ -138,11 +125,22 @@ export const ReactionTime: React.FC<GameProps> = ({ onComplete }) => {
                 <h2 className="text-8xl font-mono font-black italic">
                   {lastRt.toFixed(0)}<span className="text-3xl not-italic ml-2 opacity-50">ms</span>
                 </h2>
+                <p className="text-sm mt-6 font-mono opacity-40 uppercase tracking-widest">
+                  Round {roundsDone} / {ROUNDS}
+                </p>
               </div>
             )}
           </motion.div>
         </AnimatePresence>
       )}
+
+      <div className="absolute bottom-12 flex gap-4">
+        {Array.from({ length: ROUNDS }).map((_, i) => (
+          <div key={i} className="w-12 h-1 overflow-hidden bg-white/10">
+            <div className={`h-full bg-[#00F5FF] transition-transform duration-500 ${roundsDone > i ? 'translate-x-0' : '-translate-x-full'}`} />
+          </div>
+        ))}
+      </div>
     </div>
   );
 };

@@ -2,9 +2,9 @@ import React, { useState, useEffect, useRef } from 'react';
 import { GameProps } from '../../types';
 import { motion, AnimatePresence } from 'motion/react';
 
-const SESSION_S = 60;
+const SESSION_S = 15;
 const TIER_ADVANCE = 5;
-const R0 = 22;
+const R0 = 8;   // avg ~8 T1 correct in 15s
 
 const TIER_WEIGHTS = [1.0, 1.6, 2.2, 3.0, 4.0];
 const TIER_LABELS = ['T1', 'T2', 'T3', 'T4', 'T5'];
@@ -123,7 +123,7 @@ export const MathSprint: React.FC<GameProps> = ({ onComplete }) => {
       {!started ? (
         <div className="text-center p-8">
           <h2 className="text-4xl font-bold mb-4 font-mono">MATH SPRINT</h2>
-          <p className="text-xl opacity-60 mb-2">Solve as many problems as you can in {SESSION_S}s</p>
+          <p className="text-xl opacity-60 mb-2">Solve as many math problems as you can in {SESSION_S}s</p>
           <p className="text-sm opacity-40 mb-8">Problems get harder as you progress</p>
           <button onClick={handleStart} className="btn-primary">Start</button>
         </div>

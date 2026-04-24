@@ -2,9 +2,9 @@ import React, { useState, useEffect, useRef } from 'react';
 import { GameProps } from '../../types';
 import { motion, AnimatePresence } from 'motion/react';
 
-const SESSION_S = 60;
-const TIER_ADVANCE = 20; // correct words per tier
-const R0 = 38;
+const SESSION_S = 15;
+const TIER_ADVANCE = 12; // correct words per tier
+const R0 = 20;  // avg ~8 words T1 in 15s → weightedWpm*acc² ≈ 20
 
 const WORDS_T1 = [
   'the','be','to','of','and','a','in','that','have','it','for','on','are','with','as',

@@ -2,12 +2,12 @@ import React, { useState, useEffect, useRef } from 'react';
 import { GameProps } from '../../types';
 import { motion, AnimatePresence } from 'motion/react';
 
-const INITIAL_MS = 30_000;
-const HIT_BONUS_MS = 400;
+const INITIAL_MS = 15_000;
+const HIT_BONUS_MS = 300;
 const TIER_ADVANCE = 8;   // hits per tier
 const BASE_RADIUS = 50;
 const MIN_RADIUS = 10;
-const R0 = 17;
+const R0 = 9;   // avg ~8 hits at 1.1 value each in 15s
 
 function tierRadius(totalHits: number): number {
   const tier = Math.floor(totalHits / TIER_ADVANCE);
@@ -96,7 +96,7 @@ export const AimPrecision: React.FC<GameProps> = ({ onComplete }) => {
         <div className="text-center p-8">
           <h2 className="text-4xl font-bold mb-4 font-mono">AIM PRECISION</h2>
           <p className="text-xl opacity-60 mb-2">Hit targets before time runs out.</p>
-          <p className="text-sm opacity-40 mb-8">Targets shrink as you hit more · each hit +0.4s</p>
+          <p className="text-sm opacity-40 mb-8">Targets shrink as you hit more · each hit +0.3s</p>
           <button onClick={(e) => { e.stopPropagation(); handleStart(); }} className="btn-primary">Start</button>
         </div>
       ) : (
