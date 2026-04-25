@@ -96,8 +96,21 @@ export const MathSprint: React.FC<GameProps> = ({ onComplete }) => {
     }, 1000);
   };
 
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === ' ') {
+      e.preventDefault();
+      if (!problem || !answer) return;
+      submitAnswer();
+    }
+  };
+
   const checkAnswer = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!problem || !answer) return;
+    submitAnswer();
+  };
+
+  const submitAnswer = () => {
     if (!problem || !answer) return;
     const tier = problem.tier;
     if (parseInt(answer) === problem.a) {
@@ -154,6 +167,7 @@ export const MathSprint: React.FC<GameProps> = ({ onComplete }) => {
               type="number"
               value={answer}
               onChange={(e) => setAnswer(e.target.value)}
+              onKeyDown={handleKeyDown}
               className={`w-full bg-white/5 border rounded-xl py-6 text-center text-4xl font-mono outline-none transition-all ${
                 flash === 'wrong' ? 'border-[#FF4E00]/60' : 'border-white/10 focus:border-[#00F5FF]/50'
               }`}

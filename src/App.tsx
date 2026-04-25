@@ -29,10 +29,7 @@ export default function App() {
   const { user, profile, loading, profileLoaded, signOut } = useAuth();
   const restoredRef = React.useRef(false);
 
-  const filteredGames = useMemo(() => {
-    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-    return isMobile ? GAMES.filter(g => g.id !== 'typing') : GAMES;
-  }, []);
+  const filteredGames = useMemo(() => GAMES, []);
 
   const handleStart = () => {
     setActiveGameIdx(0);
